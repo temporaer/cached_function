@@ -25,8 +25,6 @@
 #include <fstream>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/functional/hash.hpp>
@@ -59,7 +57,7 @@ namespace fscache{
                 fn = (m_path / fn).string();
                 if(fs::exists(fn)){
                     std::ifstream ifs(fn);
-                    boost::archive::text_iarchive ia(ifs);
+                    boost::archive::binary_iarchive ia(ifs);
                     retval_t ret;
                     ia >> ret;
                     BOOST_LOG_TRIVIAL(info) << "Cached access from file "<<fn;
@@ -68,7 +66,7 @@ namespace fscache{
                 retval_t ret = f(params...);
                 BOOST_LOG_TRIVIAL(info) << "Non-cached access, file "<<fn;
                 std::ofstream ofs(fn);
-                boost::archive::text_oarchive oa(ofs);
+                boost::archive::binary_oarchive oa(ofs);
                 oa << ret;
                 return ret;
             }
