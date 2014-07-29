@@ -5,13 +5,16 @@
  * Copyright 2014 Hannes Schulz <schulz@ais.uni-bonn.de>
  * 
  * Implements an almost transparent disk cache for C++ functions.
- * Depends heavily on C++11 variadic templates.
+ * Depends heavily on the C++11 features (auto, decltype, rvalue references,
+ * variadic templates)
  * 
  * Another (optional) dependency is boost.log, which is contained 
  * in boost versions * >=1.55.
  * 
- * All function arguments must be hashable, side effects are not considered.
- * Return values must be default-constructible.
+ * Preconditions are:
+ * - All function arguments must be hashable, side effects are not considered.
+ * - Returned object must be serializable
+ * - Returned object must be default constructible
  *
  * Usage example below the header code.
  * 
@@ -35,7 +38,18 @@
 
 namespace fscache{
     namespace fs = boost::filesystem;
-    template<typename... Args> inline void pass(Args&&...) {}
+    namespace detail{
+        template <typename T>
+            size_t hash_combine(std::size_t seed, const T& t) {
+                boost::hash_combine(seed, t);
+                return seed;
+            }
+        template <typename T, typename... Params>
+            size_t hash_combine(std::size_t seed, const T& t, const Params&... params) {
+                boost::hash_combine(seed, t);
+                return hash_combine(seed, params...);
+            }
+    }
     struct function_cache{
         fs::path m_path;
         function_cache(std::string path = fs::current_path().string())
@@ -44,15 +58,17 @@ namespace fscache{
         }
 
         template<typename Func, typename... Params>
-            auto operator()(Func f, Params... params) -> decltype(f(params...)) {
-                return (*this)("anonymous", f, params...);
+            auto operator()(Func f, Params&&... params) -> decltype(f(params...)) {
+                return (*this)("anonymous", f, std::forward<Params>(params)...);
             }
         template<typename Func, typename... Params>
-            auto operator()(std::string descr, Func f, Params... params) -> decltype(f(params...)) {
+            auto operator()(std::string descr, Func f, Params&&... params) -> decltype(f(params...)) {
+                std::size_t seed = detail::hash_combine(0, params...);
+                return (*this)(descr, seed, f, std::forward<Params>(params)...);
+            }
+        template<typename Func, typename... Params>
+            auto operator()(std::string descr, std::size_t seed, Func f, Params&&... params) -> decltype(f(params...)) {
                 typedef decltype(f(params...)) retval_t;
-                std::size_t seed = 0;
-                //pass(boost::hash_combine(seed, params)...);
-                boost::hash_combine(seed, params...);
                 std::string fn = descr + "-" + boost::lexical_cast<std::string>(seed);
                 fn = (m_path / fn).string();
                 if(fs::exists(fn)){
@@ -63,7 +79,7 @@ namespace fscache{
                     BOOST_LOG_TRIVIAL(info) << "Cached access from file "<<fn;
                     return ret;
                 }
-                retval_t ret = f(params...);
+                retval_t ret = f(std::forward<Params>(params)...);
                 BOOST_LOG_TRIVIAL(info) << "Non-cached access, file "<<fn;
                 std::ofstream ofs(fn);
                 boost::archive::binary_oarchive oa(ofs);
@@ -78,6 +94,7 @@ namespace fscache{
 
 #ifdef CFTEST
 #include <iostream>
+#include <boost/serialization/vector.hpp>
 
 long fib(long i){
     if(i==0)
@@ -85,6 +102,13 @@ long fib(long i){
     if(i==1)
         return 1;
     return fib(i-1) + fib(i-2);
+}
+
+std::vector<int> times(const std::vector<int>& v, int factor){
+    std::vector<int> v2 = v;
+    for(int& i : v2)
+        i *= factor;
+    return v2;
 }
 
 int
@@ -96,8 +120,23 @@ main(int argc, char **argv)
         std::cout << " where N is the index of the fibonacci number to compute" << std::endl;
         exit(1);
     }
-    std::cout << c(fib, atoi(argv[1])) << std::endl;
-    std::cout << c(fib, atoi(argv[1])) << std::endl;
+    // name cache same as function name
+    std::cout << CACHED(c, fib, atoi(argv[1])) << std::endl;
+    std::cout << CACHED(c, fib, atoi(argv[1])) << std::endl;
+
+    // most convenient
+    std::cout << c(fib, atoi(argv[1])+1) << std::endl;
+    std::cout << c(fib, atoi(argv[1])+1) << std::endl;
+ 
+    // unhashable arg, use own seed
+    std::cout << c("fib", 28725, fib, atoi(argv[1])+2) << std::endl;
+    std::cout << c("fib", 28725, fib, atoi(argv[1])+2) << std::endl;
+
+    std::vector<int> v(10000, atoi(argv[1])), v2, v3;
+    v2 = CACHED(c, times, v, 5);
+    v3 = CACHED(c, times, v, 5);
+    assert(v2 == v3);
+
     return 0;
 }
 #endif
