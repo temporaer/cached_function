@@ -5,12 +5,13 @@
  * Copyright 2014 Hannes Schulz <schulz@ais.uni-bonn.de>
  * 
  * Implements an almost transparent disk cache for C++ functions.
- * Depends heavily on C++11 features, such as variadic templates.
+ * Depends heavily on C++11 variadic templates.
  * 
  * Another (optional) dependency is boost.log, which is contained 
  * in boost versions * >=1.55.
  * 
  * All function arguments must be hashable, side effects are not considered.
+ * Return values must be default-constructible.
  *
  * Usage example below the header code.
  * 
