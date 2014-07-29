@@ -5,7 +5,7 @@
  * Copyright 2014 Hannes Schulz <schulz@ais.uni-bonn.de>
  * 
  * Implements an almost transparent disk cache for C++ functions.
- * Depends heavily on the C++11 features (auto, decltype, rvalue references,
+ * Depends heavily on C++11 features (auto, decltype, rvalue references,
  * variadic templates)
  * 
  * Another (optional) dependency is boost.log, which is contained 
@@ -63,7 +63,7 @@ namespace fscache{
             }
         template<typename Func, typename... Params>
             auto operator()(std::string descr, Func f, Params&&... params) -> decltype(f(params...)) {
-                std::size_t seed = detail::hash_combine(0, params...);
+                std::size_t seed = detail::hash_combine(0, descr, params...);
                 return (*this)(descr, seed, f, std::forward<Params>(params)...);
             }
         template<typename Func, typename... Params>
