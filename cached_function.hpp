@@ -83,7 +83,7 @@ namespace decorator{
         template<typename... Params>
         auto operator()(Params&&... args)
                 -> decltype(std::bind(m_func, args...)()){
-            return m_fc(m_id, m_func, args...);
+            return m_fc(m_id, m_func, std::forward<Params>(args)...);
         }
     };
     template<typename Function>
@@ -104,7 +104,7 @@ namespace decorator{
                 -> decltype(std::bind(m_func, args...)()){
             typedef decltype(std::bind(m_func, args...)()) ret_t;
             BOOST_LOG_TRIVIAL(info) << "BEGIN `"<<m_id<<"'";
-            ret_t ret = std::bind(m_func, args...)();
+            ret_t ret = m_func(std::forward<Params>(args)...);
             BOOST_LOG_TRIVIAL(info) << "END `"<<m_id<<"'";
             return ret;
         }
