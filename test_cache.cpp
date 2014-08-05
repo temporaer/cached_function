@@ -20,7 +20,7 @@ std::vector<int> times(const std::vector<int>& v, int factor){
 int
 main(int argc, char **argv)
 {
-    fscache::function_cache c;
+    fscache::cache c;
     if(argc != 2){
         std::cout << "Usage: " << argv[0] << " N" << std::endl;
         std::cout << " where N is the index of the fibonacci number to compute" << std::endl;

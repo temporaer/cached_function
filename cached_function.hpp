@@ -33,9 +33,9 @@ namespace fscache{
                 return hash_combine(seed, params...);
             }
     }
-    struct function_cache{
+    struct cache{
         fs::path m_path;
-        function_cache(std::string path = fs::current_path().string())
+        cache(std::string path = fs::current_path().string())
         :m_path(fs::path(path) / "cache"){
             fs::create_directories(m_path);
         }
@@ -77,8 +77,8 @@ namespace decorator{
     struct memoize{
         Function m_func;
         std::string m_id;
-        fscache::function_cache& m_fc;
-        memoize(fscache::function_cache& fc, std::string id, Function f)
+        fscache::cache& m_fc;
+        memoize(fscache::cache& fc, std::string id, Function f)
             :m_func(f), m_id(id), m_fc(fc){}
         template<typename... Params>
         auto operator()(Params&&... args)
@@ -88,7 +88,7 @@ namespace decorator{
     };
     template<typename Function>
     memoize<Function>
-    make_memoized(fscache::function_cache& fc, std::string id, Function f){
+    make_memoized(fscache::cache& fc, std::string id, Function f){
         return memoize<Function>(fc, id, f);
     }
 

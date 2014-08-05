@@ -8,11 +8,11 @@ Synopsis
 #include "cached_function.hpp"
 
 int fib(int) { ... }
-fscache::function_cache c("cache_path");
+fscache::cache c("cache_path");
 
 int result1 = c("fib", fib, 3);
 
-auto fib2 = make_memoized(c, "fib", fib);
+auto fib2 = decorator::make_memoized(c, "fib", fib);
 int result2 = fib2(3);
 
 assert(result1 == result2);
