@@ -10,8 +10,10 @@ Synopsis
 int fib(int) { ... }
 memoization::disk c("cache_path");
 
+// use case 1: wrap function call
 int result1 = c("fib", fib, 3);
 
+// use case 2: wrap function
 auto fib2 = memoization::make_memoized(c, "fib", fib);
 int result2 = fib2(3);
 
