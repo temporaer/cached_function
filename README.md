@@ -46,6 +46,10 @@ For the disk cache, additionally:
 3. Returned object must be serializable
 4. Returned object must be default constructible
 
+For registry to work (in recursive functions, see below), the assumption is
+that the function pointers are unique. This is only guaranteed for free
+functions, so use with care.
+
 
 Recursive Functions
 -------------------
