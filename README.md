@@ -5,7 +5,7 @@ Synopsis
 --------
 
 ```c++
-#include "cached_function.hpp"
+#include "memoization.hpp"
 
 int fib(int) { ... }
 memoization::disk c("cache_path");
