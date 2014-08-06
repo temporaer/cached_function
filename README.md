@@ -47,6 +47,27 @@ For the disk cache, additionally:
 4. Returned object must be default constructible
 
 
+Recursive Functions
+-------------------
+
+Recursive functions cannot be cached without modifying them.
+The modification is made easier by storing cached functions in a central
+location:
+
+```c++
+using namespace memoization;
+long fib(long i){
+    if(i==0) return 0;
+    if(i==1) return 1;
+    return memoized<disk>(fib, i-1)
+         + memoized<disk>(fib, i-2);
+}
+disk c("cache");
+auto mfib = make_memoized(c, "fib", fib);
+long res = mfib(100);
+```
+
+
 Dependencies
 ------------
 
@@ -61,4 +82,5 @@ License
 -------
  
 Published under three-clause BSD license.
+
 Copyright 2014 Hannes Schulz <schulz@ais.uni-bonn.de>

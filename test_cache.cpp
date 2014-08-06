@@ -17,7 +17,8 @@ long mfib(long i){
         return 0;
     if(i==1)
         return 1;
-    return memoized<disk>(mfib)(i-1) + memoized<disk>(mfib)(i-2);
+    return memoized<disk>(mfib, i-1) 
+        +  memoized<disk>(mfib, i-2);
 }
 
 std::vector<int> times(const std::vector<int>& v, int factor){

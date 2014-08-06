@@ -134,17 +134,17 @@ namespace memoization{
         return memoize<Cache, Function>(fc, id, f);
     }
 
-    template<typename Cache, typename Function>
-    memoize<Cache, Function>
-    memoized(Function f){
+    template<typename Cache, typename Function, typename...Args>
+    auto
+    memoized(Function f, Args&&... args) -> decltype(std::bind(f, args...)()){
         typedef registry<Cache,Function> reg_t;
         auto it = reg_t::data.find(f);
         if(it == reg_t::data.end())
-            throw std::runtime_error("function is not registered with a cache");
+            throw std::runtime_error("memoize function is not registered with a cache");
         std::string id;
         Cache* fc;
         std::tie(id,fc) = it->second;
-        return memoize<Cache, Function>(*fc, id, f);
+        return memoize<Cache, Function>(*fc, id, f)(std::forward<Args>(args)...);
     }
 
 }
