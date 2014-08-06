@@ -42,16 +42,16 @@ namespace memoization{
         }
 
         template<typename Func, typename... Params>
-            auto operator()(Func f, Params&&... params) -> decltype(f(params...)) {
+            auto operator()(const Func& f, Params&&... params) -> decltype(f(params...))const{
                 return (*this)("anonymous", f, std::forward<Params>(params)...);
             }
         template<typename Func, typename... Params>
-            auto operator()(std::string descr, Func f, Params&&... params) -> decltype(f(params...)) {
+            auto operator()(const std::string& descr, const Func& f, Params&&... params) -> decltype(f(params...))const{
                 std::size_t seed = detail::hash_combine(0, descr, params...);
                 return (*this)(descr, seed, f, std::forward<Params>(params)...);
             }
         template<typename Func, typename... Params>
-            auto operator()(std::string descr, std::size_t seed, Func f, Params&&... params) -> decltype(f(params...)) {
+            auto operator()(const std::string& descr, std::size_t seed, const Func& f, Params&&... params) -> decltype(f(params...))const{
                 typedef decltype(f(params...)) retval_t;
                 std::string fn = descr + "-" + boost::lexical_cast<std::string>(seed);
                 fn = (m_path / fn).string();
@@ -73,19 +73,24 @@ namespace memoization{
     };
 
     struct memory{
-        std::map<std::size_t, boost::any> m_data;
+        mutable std::map<std::size_t, boost::any> m_data;
 
         template<typename Func, typename... Params>
-            auto operator()(Func f, Params&&... params) -> decltype(f(params...)) {
+            auto operator()(const Func& f, Params&&... params) -> decltype(f(params...)) const {
                 return (*this)("anonymous", f, std::forward<Params>(params)...);
             }
         template<typename Func, typename... Params>
-            auto operator()(std::string descr, Func f, Params&&... params) -> decltype(f(params...)) {
+            auto operator()(std::string descr, const Func& f, Params&&... params) -> decltype(f(params...)) const {
                 std::size_t seed = detail::hash_combine(0, descr, params...);
                 return (*this)(seed, f, std::forward<Params>(params)...);
             }
         template<typename Func, typename... Params>
-            auto operator()(std::size_t seed, Func f, Params&&... params) -> decltype(f(params...)) {
+            auto operator()(const std::string& descr, std::size_t seed, const Func& f, Params&&... params) -> decltype(f(params...)) const {
+                boost::hash_combine(seed, descr);
+                return (*this)(seed, f, std::forward<Params>(params)...);
+            }
+        template<typename Func, typename... Params>
+            auto operator()(std::size_t seed, const Func& f, Params&&... params) -> decltype(f(params...)) const {
                 typedef decltype(f(params...)) retval_t;
                 auto it = m_data.find(seed);
                 if(it != m_data.end()){
@@ -103,13 +108,13 @@ namespace memoization{
 
     template<typename Cache, typename Function>
     struct memoize{
-        Function m_func;
+        const Function& m_func; // we require copying the function object here.
         std::string m_id;
         Cache& m_fc;
-        memoize(Cache& fc, std::string id, Function f)
+        memoize(Cache& fc, std::string id, const Function& f)
             :m_func(f), m_id(id), m_fc(fc){}
         template<typename... Params>
-        auto operator()(Params&&... args)
+        auto operator()(Params&&... args) 
                 -> decltype(std::bind(m_func, args...)()){
             return m_fc(m_id, m_func, std::forward<Params>(args)...);
         }
@@ -124,7 +129,7 @@ namespace memoization{
         
     template<typename Cache, typename Function>
     memoize<Cache, Function>
-    make_memoized(Cache& fc, std::string id, Function f){
+    make_memoized(Cache& fc, const std::string& id, Function f){
         typedef registry<Cache,Function> reg_t;
         auto it = reg_t::data.find(f);
         if(it == reg_t::data.end()){
