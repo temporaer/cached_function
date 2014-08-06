@@ -4,8 +4,8 @@
  * Published under three-clause BSD license.
  * Copyright 2014 Hannes Schulz <schulz@ais.uni-bonn.de>
  */
-#ifndef __CACHED_FUNCTION_HPP__
-#     define __CACHED_FUNCTION_HPP__
+#ifndef __MEMOIZATION_HPP_295387__
+#     define __MEMOIZATION_HPP_295387__
 #include <map>
 #include <fstream>
 #include <utility>
@@ -19,7 +19,6 @@
 #include <boost/log/trivial.hpp>
 
 #define CACHED(cache, func, ...) cache(#func, func, __VA_ARGS__)
-#define LOGSTARTSTOP(func, ...) decorator::make_logstartstop(#func, func)
 
 namespace memoization{
     namespace fs = boost::filesystem;
@@ -119,4 +118,4 @@ namespace memoization{
         return memoize<Cache, Function>(fc, id, f);
     }
 }
-#endif /* __CACHED_FUNCTION_HPP__ */
+#endif /* __MEMOIZATION_HPP_295387__ */
