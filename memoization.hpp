@@ -37,7 +37,7 @@ namespace memoization{
     struct disk{
         fs::path m_path;
         disk(std::string path = fs::current_path().string())
-        :m_path(fs::path(path) / "disk"){
+        :m_path(fs::path(path) / "cache"){
             fs::create_directories(m_path);
         }
 
@@ -99,6 +99,8 @@ namespace memoization{
             }
     };
 
+
+
     template<typename Cache, typename Function>
     struct memoize{
         Function m_func;
@@ -112,10 +114,38 @@ namespace memoization{
             return m_fc(m_id, m_func, std::forward<Params>(args)...);
         }
     };
+    template<class Cache, class Function>
+    struct registry{
+        static std::map<Function, std::pair<std::string, Cache*> > data;
+    };
+    template<class Cache, class Function>
+    std::map<Function, std::pair<std::string, Cache*> >
+    registry<Cache, Function>::data;
+        
     template<typename Cache, typename Function>
     memoize<Cache, Function>
     make_memoized(Cache& fc, std::string id, Function f){
+        typedef registry<Cache,Function> reg_t;
+        auto it = reg_t::data.find(f);
+        if(it == reg_t::data.end()){
+            BOOST_LOG_TRIVIAL(info) << "registering " << id << " in registry";
+            reg_t::data[f] = std::make_pair(id, &fc);
+        }
         return memoize<Cache, Function>(fc, id, f);
     }
+
+    template<typename Cache, typename Function>
+    memoize<Cache, Function>
+    memoized(Function f){
+        typedef registry<Cache,Function> reg_t;
+        auto it = reg_t::data.find(f);
+        if(it == reg_t::data.end())
+            throw std::runtime_error("function is not registered with a cache");
+        std::string id;
+        Cache* fc;
+        std::tie(id,fc) = it->second;
+        return memoize<Cache, Function>(*fc, id, f);
+    }
+
 }
 #endif /* __MEMOIZATION_HPP_295387__ */
