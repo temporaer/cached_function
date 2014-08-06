@@ -36,14 +36,15 @@ The memory-version does not serialize to disk, it relies on copying.
 
 Assumptions
 -----------
-For disk cache:
+For in-memory cache:
 
 1. All function arguments must be hashable
 2. The function does not have side effects
+
+For the disk cache, additionally:
+
 3. Returned object must be serializable
 4. Returned object must be default constructible
-
-For the memory cache, the serializability is not necessary.
 
 
 Dependencies
