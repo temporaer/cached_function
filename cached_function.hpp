@@ -6,6 +6,7 @@
  */
 #ifndef __CACHED_FUNCTION_HPP__
 #     define __CACHED_FUNCTION_HPP__
+#include <map>
 #include <fstream>
 #include <utility>
 #include <boost/archive/binary_iarchive.hpp>
@@ -14,12 +15,13 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/any.hpp>
 #include <boost/log/trivial.hpp>
 
 #define CACHED(cache, func, ...) cache(#func, func, __VA_ARGS__)
 #define LOGSTARTSTOP(func, ...) decorator::make_logstartstop(#func, func)
 
-namespace fscache{
+namespace memoization{
     namespace fs = boost::filesystem;
     namespace detail{
         template <typename T>
@@ -33,10 +35,10 @@ namespace fscache{
                 return hash_combine(seed, params...);
             }
     }
-    struct cache{
+    struct disk{
         fs::path m_path;
-        cache(std::string path = fs::current_path().string())
-        :m_path(fs::path(path) / "cache"){
+        disk(std::string path = fs::current_path().string())
+        :m_path(fs::path(path) / "disk"){
             fs::create_directories(m_path);
         }
 
@@ -71,14 +73,39 @@ namespace fscache{
             }
     };
 
-}
-namespace decorator{
-    template<typename Function>
+    struct memory{
+        std::map<std::size_t, boost::any> m_data;
+
+        template<typename Func, typename... Params>
+            auto operator()(Func f, Params&&... params) -> decltype(f(params...)) {
+                return (*this)("anonymous", f, std::forward<Params>(params)...);
+            }
+        template<typename Func, typename... Params>
+            auto operator()(std::string descr, Func f, Params&&... params) -> decltype(f(params...)) {
+                std::size_t seed = detail::hash_combine(0, descr, params...);
+                return (*this)(seed, f, std::forward<Params>(params)...);
+            }
+        template<typename Func, typename... Params>
+            auto operator()(std::size_t seed, Func f, Params&&... params) -> decltype(f(params...)) {
+                typedef decltype(f(params...)) retval_t;
+                auto it = m_data.find(seed);
+                if(it != m_data.end()){
+                    BOOST_LOG_TRIVIAL(info) << "Cached access from memory";
+                    return boost::any_cast<retval_t>(it->second);
+                }
+                retval_t ret = f(std::forward<Params>(params)...);
+                BOOST_LOG_TRIVIAL(info) << "Non-cached access";
+                m_data[seed] = ret;
+                return ret;
+            }
+    };
+
+    template<typename Cache, typename Function>
     struct memoize{
         Function m_func;
         std::string m_id;
-        fscache::cache& m_fc;
-        memoize(fscache::cache& fc, std::string id, Function f)
+        Cache& m_fc;
+        memoize(Cache& fc, std::string id, Function f)
             :m_func(f), m_id(id), m_fc(fc){}
         template<typename... Params>
         auto operator()(Params&&... args)
@@ -86,33 +113,10 @@ namespace decorator{
             return m_fc(m_id, m_func, std::forward<Params>(args)...);
         }
     };
-    template<typename Function>
-    memoize<Function>
-    make_memoized(fscache::cache& fc, std::string id, Function f){
-        return memoize<Function>(fc, id, f);
-    }
-
-    template<typename Function>
-    struct logstartstop{
-        // logging works only on non-void m_func at the moment!
-        Function m_func;
-        std::string m_id;
-        logstartstop(std::string id, Function f)
-            :m_func(f), m_id(id){}
-        template<typename... Params>
-        auto operator()(Params&&... args)
-                -> decltype(std::bind(m_func, args...)()){
-            typedef decltype(std::bind(m_func, args...)()) ret_t;
-            BOOST_LOG_TRIVIAL(info) << "BEGIN `"<<m_id<<"'";
-            ret_t ret = m_func(std::forward<Params>(args)...);
-            BOOST_LOG_TRIVIAL(info) << "END `"<<m_id<<"'";
-            return ret;
-        }
-    };
-    template<typename Function>
-    logstartstop<Function>
-    make_logstartstop(std::string id, Function f){
-        return logstartstop<Function>(id, f);
+    template<typename Cache, typename Function>
+    memoize<Cache, Function>
+    make_memoized(Cache& fc, std::string id, Function f){
+        return memoize<Cache, Function>(fc, id, f);
     }
 }
 #endif /* __CACHED_FUNCTION_HPP__ */
