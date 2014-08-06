@@ -54,20 +54,19 @@ functions, so use with care.
 Recursive Functions
 -------------------
 
-Recursive functions cannot be cached without modifying them.
-The modification is made easier by storing cached functions in a central
-location:
+Recursive functions cannot be memoized without modifying them.  The
+modification is made easier by storing references to the cache in a global
+variable:
 
 ```c++
 using namespace memoization;
 long fib(long i){
-    if(i==0) return 0;
-    if(i==1) return 1;
-    return memoized<disk>(fib, i-1)
-         + memoized<disk>(fib, i-2);
+    if(i<2) return i;
+    return memoized<memory>(fib, i-1)
+         + memoized<memory>(fib, i-2);
 }
-disk c("cache");
-auto mfib = make_memoized(c, "fib", fib);
+memory cache;
+auto mfib = make_memoized(cache, "fib", fib);
 long res = mfib(100);
 ```
 

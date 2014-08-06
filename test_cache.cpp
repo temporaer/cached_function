@@ -11,14 +11,12 @@ long fib(long i){
 }
 
 // now the memoized version!
+template<class Cache>
 long mfib(long i){
     using namespace memoization;
-    if(i==0)
-        return 0;
-    if(i==1)
-        return 1;
-    return memoized<disk>(mfib, i-1) 
-        +  memoized<disk>(mfib, i-2);
+    if(i < 2) return i;
+    return memoized<Cache>(mfib<Cache>, i-1) 
+        +  memoized<Cache>(mfib<Cache>, i-2);
 }
 
 std::vector<int> times(const std::vector<int>& v, int factor){
@@ -62,7 +60,7 @@ void test_disk_cache(int i){
     assert(v2 == v3);
 
     // finally, test the recursive memoized version
-    auto fib3 = memoization::make_memoized(c, "mfib", mfib);
+    auto fib3 = memoization::make_memoized(c, "mfib", mfib<memoization::disk>);
     assert(fib3(i+4) == fib(i+4));
 }
 
@@ -98,6 +96,10 @@ void test_mem_cache(int i){
     v2 = CACHED(c, times, v, 5);
     v3 = CACHED(c, times, v, 5);
     assert(v2 == v3);
+
+    // finally, test the recursive memoized version
+    auto fib3 = memoization::make_memoized(c, "mfib", mfib<memoization::memory>);
+    assert(fib3(i+4) == fib(i+4));
 }
 
 int
